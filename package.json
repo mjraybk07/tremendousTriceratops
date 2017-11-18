@@ -1,13 +1,13 @@
 {
-  "name": "github-fetcher-fullstack-v2",
+  "name": "tremendousTriceratops",
   "version": "1.0.0",
-  "description": "",
+  "description": "recipe search app",
   "main": "index.js",
   "scripts": {
     "react-dev": "webpack -d --watch",
     "server-dev": "nodemon server/index.js"
   },
-  "author": "Beth Johnson",
+  "author": "tremendousTriceratops",
   "license": "ISC",
   "devDependencies": {
     "babel-core": "^6.23.1",
@@ -17,12 +17,14 @@
     "webpack": "^2.2.1"
   },
   "dependencies": {
-    "angular": "^1.6.3",
     "body-parser": "^1.17.2",
+    "bookshelf": "^0.11.1",
     "express": "^4.15.0",
     "jquery": "^3.1.1",
+    "knex": "^0.14.0",
     "mongoose": "^4.8.6",
-    "mysql": "^2.13.0",
+    "mysql": "^2.15.0",
+    "pg": "^7.4.0",
     "react": "^15.4.2",
     "react-dom": "^15.4.2"
   }
