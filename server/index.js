@@ -1,10 +1,12 @@
 var express = require('express');
 var bodyParser = require('body-parser');
 var request = require('request');
+const pg = require('pg');
 
 // UNCOMMENT THE DATABASE YOU'D LIKE TO USE
 // var items = require('../database-mysql');
 // var items = require('../database-mongo');
+
 
 //*********************************************************************************************************
 //DATABASE HELPER FUNCTIONS NEEDED: 
@@ -18,6 +20,8 @@ var app = express();
 
 app.use(express.static(__dirname + '/../react-client/dist'));
 app.use(bodyParser.json())
+
+
 
 app.post('/search', (req, res) => {
 // 	/search - Query DB for recipes by search term	
