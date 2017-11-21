@@ -42,7 +42,7 @@ const seed = () => {
     CREATE TABLE users_recipes (
       id SERIAL PRIMARY KEY,
       user_id FOREIGN KEY users_id,
-      recipe_id FOREIGN KEY  recipes_id     
+      recipe_id FOREIGN KEY recipes_id     
     );
   `;
   client.query(qry, (err, result) => {
