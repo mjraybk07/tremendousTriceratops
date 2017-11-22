@@ -1,4 +1,4 @@
-const pg = require('pg');
+const pg = require ('pg');
 
 // const knex = require('knex')({
 //   client: 'pg',
@@ -13,19 +13,21 @@ const pg = require('pg');
 
 // const bookshelf = require('bookshelf')(knex);
 
-// DB connect string
+// DB connection string
 // var connectString = "postgres://app_user:app_password@localhost/recipesDB"
 //const client = new pg.Client = "postgres://localhost/recipesDB";
 
+// Establish new database client
 const client = new pg.Client(process.env.DATABASE_URL);
 
-// this will seed our database and create our tables
+// This will SEED our database and create our tables upon run of package.json
+// note: "database-dev" script added to package.json 
 const seed = () => {
   const qry = `
     DROP TABLE IF EXISTS recipes;
     CREATE TABLE recipes (
       id SERIAL PRIMARY KEY,
-      title TEXT,
+      title VARCHAR(200),
       ingredients TEXT,
       directions TEXT,
       calories INTEGER,
@@ -35,8 +37,8 @@ const seed = () => {
     DROP TABLE IF EXISTS users;
     CREATE TABLE users (
       id SERIAL PRIMARY KEY,
-      name TEXT,
-      password TEXT      
+      name VARCHAR(200),
+      password VARCHAR(200)      
     );
     DROP TABLE IF EXISTS users_recipes;
     CREATE TABLE users_recipes (
@@ -49,24 +51,90 @@ const seed = () => {
     if (err) {
       console.log(err);
     } else {
-      console.log(result); //TBD
+      console.log('Seed database with tables SUCCESS....', result); //TBD
       //result.rows.forEach((row) => console.log(row.id)) // TBD
     }
   })
 }
 
+// Establish connection to database
 const connect = () => {
   client.connect( (err) => {
     if (!err) {
       if (process.env.SEED)  {
         seed();
-        console.log('seed some data')
+        console.log('seeding the database data');
       }
     }
   })  
 }
 
-connect();
+
+
+
+// Query DB for ALL recipes
+const getAllRecipes = (cb) => {
+  client.query('SELECT * FROM recipes', (err, result) => {
+    if (err) {
+      return cb(err);
+    }
+    if ( result.rows.length === 0 ) {
+      return cb('no recipe records available');
+    }
+    cb(null, result.rows);
+  })
+}
+
+// Query DB for ALL users
+const getAllUsers = (cb) => {
+  client.query('SELECT * FROM users', (err, result) => {
+    if (err) {
+      return cb(err);
+    }
+    if ( result.rows.length === 0 ) {
+      return cb('no user records available');
+    }
+    cb(null, result.rows);
+  })
+}
+
+
+// -- TODO --
+// Query DB for user's favorite recipes
+const getUserFavorites = (userId, cb) => {
+  client.query('SELECT * FROM recipes', (err, result) => {
+    if (err) {
+      return cb(err);
+    }
+    if ( result.rows.length === 0 ) {
+      return cb('no user favorites available');
+    }
+    cb(null, result.rows);
+  })
+}
+
+// -- TODO --
+// Query DB for recipes title and ingredients for search term
+const searchTerm = (term, cb) => {
+  client.query('SELECT * FROM recipes', (err, result) => {
+    if (err) {
+      return cb(err);
+    }
+    cb(null, result.rows);
+  })
+}
+
+// Add a user to the list - does not handle authentication but table does prevent duplicate names
+const addUser = (userName) => {
+  client.query('INSERT INTO users (name) VALUES (userName)'), (err, result) => {
+    if (err) {
+      return cb(err);
+    }
+    console.log(userName + ' was added to database');
+    cb(null, result);
+    
+  }
+}
 
 /*
 
@@ -140,4 +208,12 @@ var selectAll = function(callback) {
 */
 
 // module.exports.bookshelf = bookshelf;
-module.exports.selectAll = selectAll;
+//module.exports.selectAll = selectAll;
+module.exports = {
+  connect,
+  getAllRecipes,
+  getAllUsers,
+  getUserFavorites,
+  searchTerm,
+  addUser,
+};

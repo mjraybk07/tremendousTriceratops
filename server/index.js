@@ -1,11 +1,14 @@
 var express = require('express');
 var bodyParser = require('body-parser');
 var request = require('request');
-const pg = require('pg');
+const db = require('../database-postgresql/index');
 
 // UNCOMMENT THE DATABASE YOU'D LIKE TO USE
 // var items = require('../database-mysql');
 // var items = require('../database-mongo');
+
+// Connect to DATABASE
+db.connect();
 
 
 //*********************************************************************************************************
