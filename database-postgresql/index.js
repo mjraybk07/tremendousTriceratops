@@ -20,14 +20,17 @@ const pg = require ('pg');
 // Establish new database client
 const client = new pg.Client(process.env.DATABASE_URL);
 
+
 // This will SEED our database and create our tables upon run of package.json
 // note: "database-dev" script added to package.json 
+
 const seed = () => {
   const qry = `
     DROP TABLE IF EXISTS recipes;
     CREATE TABLE recipes (
       id SERIAL PRIMARY KEY,
-      title VARCHAR(200),
+      title VARCHAR(200) UNIQUE NOT NULL,
+      image TEXT,
       ingredients TEXT,
       directions TEXT,
       calories INTEGER,
@@ -37,14 +40,14 @@ const seed = () => {
     DROP TABLE IF EXISTS users;
     CREATE TABLE users (
       id SERIAL PRIMARY KEY,
-      name VARCHAR(200),
+      name VARCHAR(200) UNIQUE NOT NULL,
       password VARCHAR(200)      
     );
-    DROP TABLE IF EXISTS users_recipes;
-    CREATE TABLE users_recipes (
+    DROP TABLE IF EXISTS favorites;
+    CREATE TABLE favorites (
       id SERIAL PRIMARY KEY,
-      user_id FOREIGN KEY users_id,
-      recipe_id FOREIGN KEY recipes_id     
+      user_id INTEGER NOT NULL REFERENCES users (id),
+      recipe_id INTEGER NOT NULL REFERENCES recipes (id)
     );
   `;
   client.query(qry, (err, result) => {
@@ -85,6 +88,21 @@ const getAllRecipes = (cb) => {
   })
 }
 
+// Query DB for top recipes, order descending by watchers
+const getTopRecipes = (cb) => {
+  client.query('SELECT * FROM recipes ORDER BY watchers DESC', (err, result) => {
+    if (err) {
+      return cb(err);
+    }
+    if ( result.rows.length === 0 ) {
+      return cb('no recipe records available');
+    }
+    cb(null, result.rows);
+  })
+}
+
+
+
 // Query DB for ALL users
 const getAllUsers = (cb) => {
   client.query('SELECT * FROM users', (err, result) => {
@@ -99,10 +117,12 @@ const getAllUsers = (cb) => {
 }
 
 
-// -- TODO --
+// -- TODO -------
+
+
 // Query DB for user's favorite recipes
-const getUserFavorites = (userId, cb) => {
-  client.query('SELECT * FROM recipes', (err, result) => {
+const getFavoritesByUser = (userId, cb) => {
+  client.query('SELECT * FROM recipes ORDER BY watchers DESC ', (err, result) => {
     if (err) {
       return cb(err);
     }
@@ -113,9 +133,11 @@ const getUserFavorites = (userId, cb) => {
   })
 }
 
-// -- TODO --
+// -- TODO --------
+
+
 // Query DB for recipes title and ingredients for search term
-const searchTerm = (term, cb) => {
+const getRecipiesBySearchTerm = (term, cb) => {
   client.query('SELECT * FROM recipes', (err, result) => {
     if (err) {
       return cb(err);
@@ -124,14 +146,48 @@ const searchTerm = (term, cb) => {
   })
 }
 
-// Add a user to the list - does not handle authentication but table does prevent duplicate names
-const addUser = (userName) => {
-  client.query('INSERT INTO users (name) VALUES (userName)'), (err, result) => {
+// Add new user to the list - does not handle authentication but table does prevent duplicate names
+const addUser = (userName, password) => {
+  client.query('INSERT INTO users (name, password) VALUES (userName, password)'), (err, result) => {
+    if (err) {
+      return cb(err);
+    }
+    console.log(userName + ' was added to database');
+    cb(null, result);    
+  }
+}
+
+// Add new recipe to database
+const addRecipe = () => {}
+
+
+
+// Add favorite recipe by user --TODO----
+//  --- note, each time a recipe is favorited, the watchers count goes up
+const addFavoriteByUser = (userName, recipeObj) => {
+  client.query('INSERT INTO favorites (user_id, recipe_id) VALUES (userName, password)'), (err, result) => {
     if (err) {
       return cb(err);
     }
     console.log(userName + ' was added to database');
     cb(null, result);
+    
+  }
+}
+
+
+// Remove favorite recipe by user  --- TODO ----
+// ---- note, each time a recipe is removed from favorites, the watch count goes down
+const removeFavoriteByUser = () => {}
+
+
+// Search recipes by term, return recipe matches
+const getRecipesBySearchTerm = (term) => {
+  client.query('SELECT * FROM recipes WHERE'), (err, result) => {
+    if (err) {
+      return cb(err);
+    }
+    cb(null, result.rows);
     
   }
 }
@@ -212,8 +268,12 @@ var selectAll = function(callback) {
 module.exports = {
   connect,
   getAllRecipes,
+  getTopRecipes,
   getAllUsers,
-  getUserFavorites,
-  searchTerm,
+  getFavoritesByUser,
+  getRecipesBySearchTerm,
   addUser,
+  addRecipe,
+  addFavoriteByUser,
+  removeFavoriteByUser
 };
