@@ -1,5 +1,8 @@
 const pg = require ('pg');
 
+
+// COMMENTED OUT knex and bookshelf - currently not using
+
 // const knex = require('knex')({
 //   client: 'pg',
 //   connection: {
@@ -13,16 +16,23 @@ const pg = require ('pg');
 
 // const bookshelf = require('bookshelf')(knex);
 
-// DB connection string
-// var connectString = "postgres://app_user:app_password@localhost/recipesDB"
-//const client = new pg.Client = "postgres://localhost/recipesDB";
+
+// DB connection strings for testing
+// var connectString = "postgres://app_user:app_password@localhost/recipesDB";
+// var connectString = "postgres://localhost/recipesDB";
+// var connectString = "postgres://localhost/app_database";
+// var connectString = "postgres://app_user:app_password@localhost/app_database";
+
+// const client = new pg.Client = connectString;
+
+
 
 // Establish new database client
+// note: "database-dev" script added to package.json 
 const client = new pg.Client(process.env.DATABASE_URL);
 
 
 // This will SEED our database and create our tables upon run of package.json
-// note: "database-dev" script added to package.json 
 
 const seed = () => {
   const qry = `
@@ -41,13 +51,14 @@ const seed = () => {
     CREATE TABLE users (
       id SERIAL PRIMARY KEY,
       name VARCHAR(200) UNIQUE NOT NULL,
-      password VARCHAR(200)      
+      password VARCHAR(200) UNIQUE     
     );
     DROP TABLE IF EXISTS favorites;
     CREATE TABLE favorites (
-      id SERIAL PRIMARY KEY,
+      id SERIAL,
       user_id INTEGER NOT NULL REFERENCES users (id),
-      recipe_id INTEGER NOT NULL REFERENCES recipes (id)
+      recipe_id INTEGER NOT NULL REFERENCES recipes (id),
+      PRIMARY KEY (user_id, recipe_id)
     );
   `;
   client.query(qry, (err, result) => {
@@ -60,7 +71,7 @@ const seed = () => {
   })
 }
 
-// Establish connection to database
+// Establish connection to database. Call seed() to create the tables
 const connect = () => {
   client.connect( (err) => {
     if (!err) {
@@ -73,7 +84,7 @@ const connect = () => {
 }
 
 
-
+/********** QUERY DATABASE FUNCTIONS *************/
 
 // Query DB for ALL recipes
 const getAllRecipes = (cb) => {
@@ -88,9 +99,9 @@ const getAllRecipes = (cb) => {
   })
 }
 
-// Query DB for top recipes, order descending by watchers
+// Query DB for TOP 12 recipes, order descending by number of watchers, 12 limit
 const getTopRecipes = (cb) => {
-  client.query('SELECT * FROM recipes ORDER BY watchers DESC', (err, result) => {
+  client.query('SELECT * FROM recipes ORDER BY watchers DESC LIMIT 12', (err, result) => {
     if (err) {
       return cb(err);
     }
@@ -117,12 +128,12 @@ const getAllUsers = (cb) => {
 }
 
 
+// Query DB for user's favorite recipes 
 // -- TODO -------
+//    Note: QUERY IS INCORRECT / INCOMPLETE
 
-
-// Query DB for user's favorite recipes
 const getFavoritesByUser = (userId, cb) => {
-  client.query('SELECT * FROM recipes ORDER BY watchers DESC ', (err, result) => {
+  client.query('SELECT userId FROM favorites ORDER BY watchers DESC ', (err, result) => {
     if (err) {
       return cb(err);
     }
@@ -133,12 +144,12 @@ const getFavoritesByUser = (userId, cb) => {
   })
 }
 
+// Query DB recipes title and ingredients for search term
 // -- TODO --------
+//    Note: QUERY IS INCORRECT / INCOMPLETE
 
-
-// Query DB for recipes title and ingredients for search term
 const getRecipiesBySearchTerm = (term, cb) => {
-  client.query('SELECT * FROM recipes', (err, result) => {
+  client.query('SELECT * FROM recipes WHERE ', (err, result) => {
     if (err) {
       return cb(err);
     }
@@ -147,23 +158,44 @@ const getRecipiesBySearchTerm = (term, cb) => {
 }
 
 // Add new user to the list - does not handle authentication but table does prevent duplicate names
-const addUser = (userName, password) => {
-  client.query('INSERT INTO users (name, password) VALUES (userName, password)'), (err, result) => {
+const addUser = (userObj, cb) => {
+  client.query('INSERT INTO users SET ?'), userObj, (err, result) => {
     if (err) {
       return cb(err);
     }
-    console.log(userName + ' was added to database');
+    console.log(userObj.name + ' was added to database');
     cb(null, result);    
   }
 }
 
+
 // Add new recipe to database
-const addRecipe = () => {}
+//  --TODO--
+//  Q: What will be the new recipe arg format?
+//  Fix format of values passed into db query
+//  If recipe already exists in recipes table, db will throw error
+const addRecipe = (recipeObj, cb) => {
+    client.query('INSERT INTO recipes SET ?'), recipeObj, (err, result) => {
+    if (err) {
+      return cb(err);
+    }
+    console.log(recipeObj.title + ' was added to recipes table');
+    cb(null, result);
+    
+  }
+}
 
 
-
-// Add favorite recipe by user --TODO----
-//  --- note, each time a recipe is favorited, the watchers count goes up
+// Add favorite recipe by user 
+//   --TODO----
+//   NOTE: when a recipe is favorited
+//     if it does not already exist in the db 
+//       the recipe should be added to recipe table 
+//       the watchers count should increment
+//       and the recipe id and user id should be added to a new record in favorites
+//     else 
+//       only the watchers count should increment
+//       and the recipe id and user id should be added to a new record in favorites
 const addFavoriteByUser = (userName, recipeObj) => {
   client.query('INSERT INTO favorites (user_id, recipe_id) VALUES (userName, password)'), (err, result) => {
     if (err) {
@@ -176,8 +208,10 @@ const addFavoriteByUser = (userName, recipeObj) => {
 }
 
 
-// Remove favorite recipe by user  --- TODO ----
-// ---- note, each time a recipe is removed from favorites, the watch count goes down
+// Remove favorite recipe by user 
+// --- TODO ----
+//     Note, when a recipe is removed from user favorites table, 
+//     the watch count should go down in the recipe watchers field
 const removeFavoriteByUser = () => {}
 
 
@@ -192,79 +226,12 @@ const getRecipesBySearchTerm = (term) => {
   }
 }
 
-/*
-
-var config = {
-  host     : 'localhost',
-  user     : 'app_user',
-  password : 'app_password', 
-  database : 'app_database',
-  port: 5432,
-  max: 10
-};
-
-// this initializes a connection pool
-// it will keep idle connections open for 30 seconds
-// and set a limit of max 10 idle clients
-var pool = new pg.Pool(config);
-
-// to run a query we can acquire a client from the pool,
-// run a query on the client, and then retun the l=client to the  pool
-// ----- this is running a test query of select all recipes ------
-
-pool.connect(connectString, function (err, client, done) {
-  if (err) {
-    return console.error('error fetching client from pool', err);
-  }
-  client.query('SELECT * FROM recipes', function (err, result) {
-    if (err) {
-      return console.error('error running query', err);
-    }
-    res.render('index', {recipes: result.rows});
-    
-    // call done to release the client back to the pool
-    done();
-  })
-});
 
 
-pool.on('error', function (err, client) {
-  // if an error is encountered by a client while it sits idle in the pool
-  // the pool itself will emit an error event with both the error and
-  // the client which emitted the original error
-  // this is a rare occurrence but can happen if there is a network partition
-  // between your app and the DB, the DB restarts, etc.
-  // you might want to handle it and at least log it out
-  console.error('idle client error', err.message, err.stack)
-})
-
-var recipe = {
-  name: 'test test',
-  ingredients: 'this is also a test',
-  directions: 'this is also a test of a test',
-  calories: 540,
-  servings: 4,
-}
-
-
-connection.query('insert into recipes set ?', recipe, function(err, results) {
-  console.log(query.pg);
-} )
-
-
-var selectAll = function(callback) {
-  connection.query('SELECT * FROM recipes', function(err, results, fields) {
-    if(err) {
-      callback(err, null);
-    } else {
-      callback(null, results);
-    }
-  });
-};
-*/
+/************ EXPORTS *****************/
 
 // module.exports.bookshelf = bookshelf;
-//module.exports.selectAll = selectAll;
+
 module.exports = {
   connect,
   getAllRecipes,
